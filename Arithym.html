@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title id="main-title">Herramienta Aritmética Interactiva Extrema</title>
+    <style>
+        /* CONFIGURACIÓN BASE Y CURSOR DE GATO */
+        body { 
+            font-family: sans-serif; 
+            margin: 20px; 
+            padding-top: 60px;
+            transition: background-color 0.3s ease;
+            cursor: none; 
+            min-height: 100vh;
+            user-select: none;
+            overflow-x: hidden;
+        }
+        
+        input, select, button { cursor: none; }
+
+        .seccion { 
+            border: 2px solid black; 
+            padding: 15px; 
+            margin-bottom: 20px; 
+            background-color: white; 
+            border-radius: 5px;
+            position: relative;
+            z-index: 10;
+        }
+
+        /* LIENZO DE GRAFITI NEÓN */
+        #canvas-grafiti {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        /* CURSOR DE GATO Y RASTRO DE PATITAS */
+        #cursor-gato { position: fixed; pointer-events: none; font-size: 28px; z-index: 9999; transform: translate(-50%, -50%); }
+        .patita { position: fixed; pointer-events: none; font-size: 16px; z-index: 9998; opacity: 1; transition: opacity 1.5s ease, transform 1.5s ease; }
+
+        /* BARRA SUPERIOR DERECHA INTERACTIVA */
+        .barra-interactiva {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            z-index: 1000;
+            background: white;
+            padding: 8px;
+            border: 2px solid #000;
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .btn-barra { font-size: 22px; background: none; border: none; padding: 0; cursor: none; }
+        #selector-color { display: none; }
+
+        /* OJOS LOCOS */
+        .contenedor-ojos { display: flex; gap: 5px; }
+        .ojo { width: 26px; height: 26px; background: white; border: 2px solid black; border-radius: 50%; position: relative; display: flex; align-items: center; justify-content: center; }
+        .pupila { width: 9px; height: 9px; background: black; border-radius: 50%; position: absolute; }
+
+        /* BOTÓN IMPOSIBLE */
+        #btn-imposible { position: relative; padding: 10px 20px; font-weight: bold; background-color: red; color: white; border: 2px solid black; border-radius: 5px; transition: all 0.1s ease; z-index: 20; }
+
+        /* ANIMACIÓN TERREMETO */
+        @keyframes terremoto {
+            0% { transform: translate(1px, 1px) rotate(0deg); }
+            10% { transform: translate(-1px, -2px) rotate(-1deg); }
+            20% { transform: translate(-3px, 0px) rotate(1deg); }
+            30% { transform: translate(0px, 2px) rotate(0deg); }
+            40% { transform: translate(1px, -1px) rotate(1deg); }
+            50% { transform: translate(-1px, 2px) rotate(-1deg); }
+            60% { transform: translate(-3px, 1px) rotate(0deg); }
+            70% { transform: translate(2px, 1px) rotate(-1deg); }
+            80% { transform: translate(-1px, -1px) rotate(1deg); }
+            90% { transform: translate(2px, 2px) rotate(0deg); }
+            100% { transform: translate(1px, -2px) rotate(-1deg); }
+        }
+        .efecto-terremoto { animation: terremoto 0.2s infinite; }
+
+        /* FILTRO CONGELADOR */
+        .efecto-congelado {
+            filter: blur(4px) saturate(0.5) hue-rotate(180deg);
+            background-color: #e0f7fa !important;
+        }
+
+        /* ELEMENTOS DEL BOSS */
+        #boss-fantasma {
+            position: fixed;
+            font-size: 80px;
+            z-index: 9990;
+            pointer-events: none;
+            display: none;
+            transition: transform 0.1s linear;
+        }
+        .bala-roja {
+            position: fixed;
+            width: 12px;
+            height: 12px;
+            background-color: red;
+            border: 2px solid black;
+            z-index: 9989;
+            pointer-events: none;
+        }
+        .bala-jugador {
+            position: fixed;
+            font-size: 20px;
+            z-index: 9988;
+            pointer-events: none;
+        }
+
+        /* Selector de Idioma */
+        .selector-idioma {
+            font-weight: bold;
+            font-size: 14px;
+            padding: 2px;
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="canvas-grafiti"></canvas>
+    <div id="boss-fantasma">👻</div>
+    <div id="cursor-gato">🐱</div>
+
+    <div class="barra-interactiva">
+        <button class="btn-barra" onclick="document.getElementById('selector-color').click()">🎨</button>
+        <input type="color" id="selector-color" value="#ffffff" oninput="cambiarFondo(this.value)">
+        
+        <button class="btn-barra" onclick="activarTerremoto()">🌋</button>
+
+        <button class="btn-barra" onclick="activarCongelador()">❄️</button>
+        
+        <div class="contenedor-ojos">
+            <div class="ojo"><div class="pupila" id="pupila1"></div></div>
+            <div class="ojo"><div class="pupila" id="pupila2"></div></div>
+        </div>
+
+        <div style="font-weight: bold; font-family: monospace; font-size: 14px;"><span id="lbl-clics">🖱️ Clics:</span> <span id="txt-clics">0</span></div>
+        
+        <!-- Selector de Idioma Incorporado -->
+        <select id="select-lang" class="selector-idioma" onchange="cambiarIdioma(this.value)">
+            <option value="es">Español</option>
+            <option value="en">English</option>
+            <option value="de">Deutsch</option>
+            <option value="zh">中文</option>
+            <option value="off">Off</option>
+        </select>
+    </div>
+
+    <div style="font-size: 18px; margin-bottom: 20px; font-weight: bold; display: flex; gap: 30px; position: relative; z-index: 10;">
+        <div><span id="lbl-puntos">🏆 Puntos:</span> <span id="puntos-globales">0</span></div>
+        <div style="background: black; color: #00ff00; padding: 2px 10px; border-radius: 3px; font-family: monospace;">
+            <span id="lbl-hora">🕒 Hora:</span> <span id="reloj-digital">00:00:00 AM</span>
+        </div>
+        <button id="btn-borrar-grafiti" onclick="limpiarGrafiti()" style="padding: 2px 10px; font-weight: bold;">🧹 Borrar Grafiti</button>
+        <div id="txt-arma" style="color: red; display: none;">💥 ARMA EQUIPADA (Presiona K para disparar)</div>
+        <div id="vida-boss" style="color: purple; display: none;"><span id="lbl-vida-boss">👾 VIDA DEL BOSS:</span> <span id="hp-boss">10</span>/10</div>
+    </div>
+
+    <div class="seccion">
+        <h2 id="t1">1. Calculadora Aritmética Estándar</h2>
+        <input type="number" id="calc-n1" placeholder="Num 1">
+        <select id="calc-operador">
+            <option value="+">+</option>
+            <option value="-">-</option>
+            <option value="*">*</option>
+            <option value="/">/</option>
+        </select>
+        <input type="number" id="calc-n2" placeholder="Num 2">
+        <button onclick="calcularAritmetica()">=</button>
+        <span id="calc-resultado" style="font-weight: bold; margin-left: 10px;">?</span>
+        
+        <h3 id="t1-historial" style="margin-top: 15px; margin-bottom: 5px;">Historial de Operaciones:</h3>
+        <div id="calc-historial" style="font-family: monospace; background: #eee; padding: 5px; max-height: 80px; overflow-y: auto;"></div>
+    </div>
+
+    <div class="seccion">
+        <h2 id="t2">2. Glosario de Operadores</h2>
+        <ul>
+            <li id="g-suma"><strong>+ (Suma):</strong> Agrega o incrementa una cantidad a otra.</li>
+            <li id="g-resta"><strong>- (Resta):</strong> Quita o disminuye una cantidad de otra.</li>
+            <li id="g-multi"><strong>* (Multiplicación):</strong> Calcula el resultado de sumar un número tantas veces como indica el otro.</li>
+            <li id="g-divi"><strong>/ (División):</strong> Reparte una cantidad en partes iguales.</li>
+            <li id="g-igual"><strong>= (Igual):</strong> No es una operación. Es el puente que conecta dos expresiones para demostrar que valen exactamente lo mismo.</li>
+        </ul>
+    </div>
+
+    <div class="seccion">
+        <h2 id="t3">3. Reto de Operación Inversa</h2>
+        <button id="btn-generar-inv" onclick="generarInversa()">Generar Operación</button>
+        <br><br>
+        <span id="inv-enunciado" style="font-size: 18px;">Presiona el botón para empezar.</span>
+        <input type="number" id="inv-respuesta" style="width: 60px; display: none;">
+        <button id="inv-btn-verificar" onclick="verificarInversa()" style="display: none;">Verificar</button>
+        <span id="inv-mensaje" style="font-weight: bold; margin-left: 10px;"></span>
+    </div>
+
+    <div class="seccion">
+        <h2 id="t4">4. Analizador de Números Avanzado</h2>
+        <input type="number" id="analizar-num" placeholder="Introduce un número">
+        <button id="btn-analizar" onclick="analizarNumero()">Analizar</button>
+        <div id="analizar-resultado" style="margin-top: 10px; line-height: 1.6;"></div>
+    </div>
+
+    <div class="seccion">
+        <h2 id="t5">5. Calculadora de Porcentaje Aritmético</h2>
+        <span id="lbl-porc1">¿Cuánto es el</span> <input type="number" id="porc-porcentaje" style="width: 50px;"> <span id="lbl-porc2">% de</span> <input type="number" id="porc-total" style="width: 80px;">?
+        <button id="btn-calc-porc" onclick="calcularPorcentaje()">Calcular</button>
+        <p id="porc-resultado" style="font-weight: bold;"></p>
+    </div>
+
+    <div class="seccion" style="background-color: #f9f9f9;">
+        <h2 id="t6">🔐 Terminal de Códigos Secretos</h2>
+        <p id="lbl-desc-codigos">Escribe tus códigos ocultos aquí (SIN ESPACIOS Y EN MAYÚSCULAS):</p>
+        <input type="text" id="input-codigo" placeholder="Escribe aquí..." oninput="verificarCodigoSecreto()">
+        <p id="codigo-respuesta" style="font-weight: bold; font-family: monospace; color: blue; font-size: 16px; margin-top: 10px; white-space: pre-wrap;"></p>
+    </div>
+
+    <div class="seccion" style="text-align: center; padding: 40px 0;">
+        <h2 id="t7">🎯 El Desafío Imposible</h2>
+        <p id="lbl-desc-imposible">Si logras hacerle clic a este botón ganarás 1.000.000.000.000.000 de puntos:</p>
+        <button id="btn-imposible" onmouseover="moverBotonImposible()" onclick="ganarBotonImposible()">¡HAZME CLIC!</button>
+    </div>
+
+
+    <script>
+        let puntos = 0;
+        let totalClics = 0;
+        let sol_inversa;
+        let idiomaActual = 'es';
+
+        // DICCIONARIOS DE IDIOMAS CORREGIDOS
+        const textos = {
+            es: {
+                title: "Herramienta Aritmética Interactiva Extrema",
+                lblClics: "🖱️ Clics:",
+                lblPuntos: "🏆 Puntos:",
+                lblHora: "🕒 Hora:",
+                btnBorrarGrafiti: "🧹 Borrar Grafiti",
+                txtArma: "💥 ARMA EQUIPADA (Presiona K para disparar)",
+                lblVidaBoss: "👾 VIDA DEL BOSS:",
+                t1: "1. Calculadora Aritmética Estándar",
+                t1Historial: "Historial de Operaciones:",
+                t2: "2. Glosario de Operadores",
+                gSuma: "<strong>+ (Suma):</strong> Agrega o incrementa una cantidad a otra.",
+                gResta: "<strong>- (Resta):</strong> Quita o disminuye una cantidad de otra.",
+                gMulti: "<strong>* (Multiplicación):</strong> Calcula el resultado de sumar un número tantas veces como indica el otro.",
+                gDivi: "<strong>/ (División):</strong> Reparte una cantidad en partes iguales.",
+                gIgual: "<strong>= (Igual):</strong> No es una operación. Es el puente que conecta dos expresiones para demostrar que valen exactamente lo mismo.",
+                t3: "3. Reto de Operación Inversa",
+                btnGenerarInv: "Generar Operación",
+                invEnunciadoInit: "Presiona el botón para empezar.",
+                invBtnVerificar: "Verificar",
+                t4: "4. Analizador de Números Avanzado",
+                btnAnalizar: "Analizar",
+                placeholderAnalizar: "Introduce un número",
+                t5: "5. Calculadora de Porcentaje Aritmético",
+                lblPorc1: "¿Cuánto es el",
+                lblPorc2: "% de",
+                btnCalcPorc: "Calcular",
+                t6: "🔐 Terminal de Códigos Secretos",
+                lblDescCodigos: "Escribe tus códigos ocultos aquí (SIN ESPACIOS Y EN MAYÚSCULAS):",
+                placeholderCodigo: "Escribe aquí...",
+                t7: "🎯 El Desafío Imposible",
+                lblDescImposible: "Si logras hacerle clic a este botón ganarás 1.000.000.000.000.000 de puntos:",
+                btnImposible: "¡HAZME CLIC!",
+                placeholderCalc: "Num"
+            },
+            en: {
+                title: "Extreme Interactive Arithmetic Tool",
+                lblClics: "🖱️ Clicks:",
+                lblPuntos: "🏆 Points:",
+                lblHora: "🕒 Time:",
+                btnBorrarGrafiti: "🧹 Clear Graffiti",
+                txtArma: "💥 WEAPON EQUIPPED (Press K to shoot)",
+                lblVidaBoss: "👾 BOSS HP:",
+                t1: "1. Standard Arithmetic Calculator",
+                t1Historial: "Operation History:",
+                t2: "2. Operators Glossary",
+                gSuma: "<strong>+ (Addition):</strong> Adds or increases one quantity to another.",
+                gResta: "<strong>- (Subtraction):</strong> Removes or decreases one quantity from another.",
+                gMulti: "<strong>* (Multiplication):</strong> Calculates the result of adding a number as many times as the other indicates.",
+                gDivi: "<strong>/ (Division):</strong> Splits a quantity into equal parts.",
+                gIgual: "<strong>= (Equal):</strong> Not an operation. It is the bridge connecting two expressions to show they are worth exactly the same.",
+                t3: "3. Inverse Operation Challenge",
+                btnGenerarInv: "Generate Operation",
+                invEnunciadoInit: "Press the button to start.",
+                invBtnVerificar: "Verify",
+                t4: "4. Advanced Number Analyzer",
+                btnAnalizar: "Analyze",
+                placeholderAnalizar: "Enter a number",
+                t5: "5. Arithmetic Percentage Calculator",
+                lblPorc1: "How much is",
+                lblPorc2: "% of",
+                btnCalcPorc: "Calculate",
+                t6: "🔐 Secret Code Terminal",
+                lblDescCodigos: "Write your hidden codes here (NO SPACES AND UPPERCASE):",
+                placeholderCodigo: "Write here...",
+                t7: "🎯 The Impossible Challenge",
+                lblDescImposible: "If you manage to click this button you will win 1,000,000,000,000,000 points:",
+                btnImposible: "CLICK ME!",
+                placeholderCalc: "Num"
+            },
+            de: {
+                title: "Extremes Interaktives Arithmetisches Werkzeug",
+                lblClics: "🖱️ Klicks:",
+                lblPuntos: "🏆 Punkte:",
+                lblHora: "🕒 Uhrzeit:",
+                btnBorrarGrafiti: "🧹 Graffiti löschen",
+                txtArma: "💥 WAFFE AUSGERÜSTET (Drücke K zum Schießen)",
+                lblVidaBoss: "👾 BOSS HP:",
+                t1: "1. Standard-Arithmetik-Rechner",
+                t1Historial: "Operationsverlauf:",
+                t2: "2. Glossar der Operatoren",
+                gSuma: "<strong>+ (Addition):</strong> Fügt eine Menge einer anderen hinzu oder erhöht sie.",
+                gResta: "<strong>- (Subtraktion):</strong> Entfernt oder verringert eine Menge von einer anderen.",
+                gMulti: "<strong>* (Multiplikation):</strong> Berechnet das Ergebnis, wenn eine Zahl so oft addiert wird, wie die andere angibt.",
+                gDivi: "<strong>/ (Division):</strong> Teilt eine Menge in gleiche Teile auf.",
+                gIgual: "<strong>= (Gleich):</strong> Keine Operation. Es ist die Brücke, die zwei Ausdrücke verbindet, um zu zeigen, dass sie genau denselben Wert haben.",
+                t3: "3. Umkehroperations-Herausforderung",
+                btnGenerarInv: "Operation generieren",
+                invEnunciadoInit: "Drücke den Knopf, um zu starten.",
+                invBtnVerificar: "Überprüfen",
+                t4: "4. Fortgeschrittener Zahlenanalysator",
+                btnAnalizar: "Analysieren",
+                placeholderAnalizar: "Geben Sie eine Nummer ein",
+                t5: "5. Arithmetischer Prozentsatz-Rechner",
+                lblPorc1: "Wie viel ist",
+                lblPorc2: "% von",
+                btnCalcPorc: "Berechnen",
+                t6: "🔐 Geheimcode-Terminal",
+                lblDescCodigos: "Schreiben Sie Ihre versteckten Codes hier (KEINE LEERZEICHEN UND GROSSBUCHSTABEN):",
+                placeholderCodigo: "Hier schreiben...",
+                t7: "🎯 Die unmögliche Herausforderung",
+                lblDescImposible: "Wenn Sie es schaffen, auf diesen Button zu klicken, gewinnen Sie 1.000.000.000.000.000 Punkte:",
+                btnImposible: "KLICK MICH!",
+                placeholderCalc: "Zahl"
+            },
+            zh: {
+                title: "极限互动算术工具",
+                lblClics: "🖱️ 点击次数:",
+                lblPuntos: "🏆 分数:",
+                lblHora: "🕒 时间:",
+                btnBorrarGrafiti: "🧹 清除涂鸦",
+                txtArma: "💥 武器已装备 (按 K 发射)",
+                lblVidaBoss: "👾 BOSS 生命值:",
+                t1: "1. 标准算术计算器",
+                t1Historial: "操作历史:",
+                t2: "2. 运算符词汇表",
+                gSuma: "<strong>+ (加法):</strong> 将一个数量添加或增加到另一个数量。",
+                gResta: "<strong>- (减法):</strong> 从另一个数量中移除或减少一个数量。",
+                gMulti: "<strong>* (乘法):</strong> 计算将一个数字相加另一个数字所指示的次数的结果。",
+                gDivi: "<strong>/ (除法):</strong> 将一个数量分成相等的部分。",
+                gIgual: "<strong>= (等于):</strong> 不是一种操作。它是连接两个表达式的桥梁，以表明它们的值完全相同。",
+                t3: "3. 逆运算挑战",
+                btnGenerarInv: "生成操作",
+                invEnunciadoInit: "点击按钮开始。",
+                invBtnVerificar: "验证",
+                t4: "4. 高级数字分析器",
+                btnAnalizar: "分析",
+                placeholderAnalizar: "输入一个数字",
+                t5: "5. 算术百分比计算器",
+                lblPorc1: "多少是",
+                lblPorc2: "% 的",
+                btnCalcPorc: "计算",
+                t6: "🔐 秘密代码终端",
+                lblDescCodigos: "在这里写下您的隐藏代码（无空格且大写）：",
+                placeholderCodigo: "在这里写...",
+                t7: "🎯 不可能的挑战",
+                lblDescImposible: "如果你成功点击这个按钮，你将获得 1,000,000,000,000,000 分：",
+                btnImposible: "点击我！",
+                placeholderCalc: "数字"
+            }
+        };
+
+        function cambiarIdioma(lang) {
+            idiomaActual = lang;
+            
+            if (lang === 'off') {
+                document.title = "";
+                const todos = document.querySelectorAll('body, body *');
+                todos.forEach(el => {
+                    if (el.children.length === 0 && el.tagName !== 'SCRIPT' && el.tagName !== 'STYLE' && el.tagName !== 'CANVAS') {
+                        if(el.tagName === 'INPUT') { el.placeholder = ""; el.value = ""; }
+                        else { el.innerHTML = ""; }
+                    }
+                });
+                document.getElementById('main-title').innerText = "";
+                return;
+            }
+
+            const t = textos[lang];
+            
+            document.title = t.title;
+            document.getElementById('lbl-clics').innerText = t.lblClics;
+            document.getElementById('lbl-puntos').innerText = t.lblPuntos;
+            document.getElementById('lbl-hora').innerText = t.lblHora;
+            document.getElementById('btn-borrar-grafiti').innerText = t.btnBorrarGrafiti;
+            
+            document.getElementById('txt-arma').innerText = t.txtArma;
+            document.getElementById('lbl-vida-boss').innerText = t.lblVidaBoss;
+            
+            document.getElementById('t1').innerText = t.t1;
+            document.getElementById('t1-historial').innerText = t.t1Historial;
+            document.getElementById('t2').innerText = t.t2;
+            
+            document.getElementById('g-suma').innerHTML = t.gSuma;
+            document.getElementById('g-resta').innerHTML = t.gResta;
+            document.getElementById('g-multi').innerHTML = t.gMulti;
+            document.getElementById('g-divi').innerHTML = t.gDivi;
+            document.getElementById('g-igual').innerHTML = t.gIgual;
+            
+            document.getElementById('t3').innerText = t.t3;
+            document.getElementById('btn-generar-inv').innerText = t.btnGenerarInv;
+            if (document.getElementById('inv-btn-verificar').style.display === "none") {
+                document.getElementById('inv-enunciado').innerText = t.invEnunciadoInit;
+            }
+            document.getElementById('inv-btn-verificar').innerText = t.invBtnVerificar;
+            
+            document.getElementById('t4').innerText = t.t4;
+            document.getElementById('btn-analizar').innerText = t.btnAnalizar;
+            document.getElementById('analizar-num').placeholder = t.placeholderAnalizar;
+            
+            document.getElementById('t5').innerText = t.t5;
+            document.getElementById('lbl-porc1').innerText = t.lblPorc1;
+            document.getElementById('lbl-porc2').innerText = t.lblPorc2;
+            document.getElementById('btn-calc-porc').innerText = t.btnCalcPorc;
+            
+            document.getElementById('t6').innerText = t.t6;
+            document.getElementById('lbl-desc-codigos').innerText = t.lblDescCodigos;
+            document.getElementById('input-codigo').placeholder = t.placeholderCodigo;
+            
+            document.getElementById('t7').innerText = t.t7;
+            document.getElementById('lbl-desc-imposible').innerText = t.lblDescImposible;
+            document.getElementById('btn-imposible').innerText = t.btnImposible;
+            
+            document.getElementById('calc-n1').placeholder = t.placeholderCalc + " 1";
+            document.getElementById('calc-n2').placeholder = t.placeholderCalc + " 2";
+        }
+
+        // VARIABLES DEL BOSS FANTASMA
+        let bossActivo = false;
+        let bossHP = 10;
+        let bossX = 100, bossY = 500;
+        let mouseX = 0, mouseY = 0;
+        let tieneArma = false;
+        const bossElemento = document.getElementById('boss-fantasma');
+
+        // BANCO DE PALABRAS PARA MAKEMELAUGH
+        const palabrasAbsurdas = [
+            "EMBARAZADAS", "PAPA", "MAMA", "HOT", "COOL", "PRIMAS HOT", 
+            "CHICAS CALIENTES EN TU ZONA", "PORQUE EL PRESIDENTE", "SI YO TUVIERA", 
+            "FIEBRE", "CACA", "WTF", "PENDEJO", "SALIENDO", "DEL HORNO", 
+            "ESTA WEB SE AUTO DESTRUIRA EN", "EL AREA 51", "CULOS", "JUGADORES", "LA MAESTRA", "BRAWL STARS", "ATRAPADO EN 4K HD PRO MAX", "PORQUE MI FAMILIA NECESITA", "EN", "LA", "IPHONE", "MESSI", " MI TIA LA HOT!!", "67", "GANCHITO", " MI NOMBRE ES:", "QUE", "SOPAPO", "PULSERITA", "REGALO A", " UNA", "TE PICA LA", "PICAL PONCHO PICAL PONCHO", " OBVIAMENTE ES UN 10/10", "EL", "SI PAPII", "AXILA", "Y PUSO CU CARA EN EL CULO DE", "UNA BERENGENA", "DETONANDO CON:", "SE BESO CON:", "EN POMPIS", "LA SUEGRA EN CHORT"
+        ];    
+
+        // CONFIGURACIÓN DEL CANVAS PARA EL GRAFITI
+        const canvas = document.getElementById('canvas-grafiti');
+        const ctx = canvas.getContext('2d');
+        let dibujando = false;
+        let xAnterior = 0, yAnterior = 0;
+        let tonoColor = 0;
+
+        function ajustarCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', ajustarCanvas);
+        ajustarCanvas();
+
+        document.addEventListener('mousedown', (e) => {
+            if (e.button === 0) { 
+                dibujando = true;
+                xAnterior = e.clientX;
+                yAnterior = e.clientY;
+            }
+            contarClic();
+        });
+        document.addEventListener('mouseup', () => dibujando = false);
+        function limpiarGrafiti() { ctx.clearRect(0, 0, canvas.width, canvas.height); }
+
+        // MANEJO DE TECLAS (S para Boss, K para Disparar)
+        document.addEventListener('keydown', (e) => {
+            let tecla = e.key.toUpperCase();
+            if (tecla === 'S' && !bossActivo) {
+                desatarBoss();
+            }
+            if (tecla === 'K' && bossActivo && tieneArma) {
+                dispararJugador();
+            }
+        });
+
+        // EFECTOS DE BARRA (TERREMOTO Y CONGELADOR)
+        function activarTerremoto() {
+            document.body.classList.add('efecto-terremoto');
+            setTimeout(() => {
+                document.body.classList.remove('efecto-terremoto');
+            }, 2000);
+        }
+
+        function activarCongelador() {
+            document.body.classList.add('efecto-congelado');
+            setTimeout(() => {
+                document.body.classList.remove('efecto-congelado');
+            }, 3000);
+        }
+
+        // CONTROL DEL CURSOR DE GATO, OJOS, PATITAS Y GRAFITI
+        const cursorGato = document.getElementById('cursor-gato');
+        let ultimaX = 0, ultimaY = 0;
+
+        document.addEventListener('mousemove', (e) => {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+            cursorGato.style.left = mouseX + 'px';
+            cursorGato.style.top = mouseY + 'px';
+
+            moverOjos(mouseX, mouseY);
+
+            if (dibujando) {
+                ctx.beginPath();
+                ctx.strokeStyle = `hsl(${tonoColor}, 100%, 50%)`;
+                ctx.lineWidth = 6;
+                ctx.lineCap = 'round';
+                ctx.shadowBlur = 15;
+                ctx.shadowColor = `hsl(${tonoColor}, 100%, 50%)`;
+                ctx.moveTo(xAnterior, yAnterior);
+                ctx.lineTo(mouseX, mouseY);
+                ctx.stroke();
+                xAnterior = mouseX;
+                yAnterior = mouseY;
+                tonoColor = (tonoColor + 5) % 360;
+            }
+
+            if (!dibujando) {
+                let distancia = Math.hypot(mouseX - ultimaX, mouseY - ultimaY);
+                if (distancia > 60) {
+                    crearPatita(mouseX, mouseY);
+                    ultimaX = mouseX;
+                    ultimaY = mouseY;
+                }
+            }
+        });
+
+        function crearPatita(x, y) {
+            const patita = document.createElement('div');
+            patita.className = 'patita';
+            patita.innerText = '🐾';
+            patita.style.left = x + 'px';
+            patita.style.top = (y + 15) + 'px'; 
+            document.body.appendChild(patita);
+            setTimeout(() => {
+                patita.style.opacity = '0';
+                patita.style.transform = 'scale(0.5)';
+            }, 100);
+            setTimeout(() => { patita.remove(); }, 1600);
+        }
+
+        // LOGICA DE MOVIMIENTO Y ATAQUE DEL BOSS FANTASMA
+        function desatarBoss() {
+            bossActivo = true;
+            bossHP = 10;
+            bossX = Math.random() * window.innerWidth;
+            bossY = window.innerHeight;
+            bossElemento.style.display = 'block';
+            document.getElementById('vida-boss').style.display = 'block';
+            document.getElementById('hp-boss').innerText = bossHP;
+            
+            let bucleBoss = setInterval(() => {
+                if (!bossActivo) { clearInterval(bucleBoss); return; }
+
+                let dx = mouseX - bossX;
+                let dy = mouseY - bossY;
+                let dist = Math.hypot(dx, dy);
+
+                if (dist < 50) {
+                    clearInterval(bucleBoss);
+                    matarJugador();
+                    return;
+                }
+
+                bossX += (dx / dist) * 4.5;
+                bossY += (dy / dist) * 4.5;
+
+                bossElemento.style.left = bossX + 'px';
+                bossElemento.style.top = bossY + 'px';
+
+                if (Math.random() < 0.07) {
+                    lanzarBalaRoja(bossX + 30, bossY + 40);
+                }
+
+            }, 20);
+        }
+
+        function lanzarBalaRoja(bx, by) {
+            const bala = document.createElement('div');
+            bala.className = 'bala-roja';
+            bala.style.left = bx + 'px';
+            bala.style.top = by + 'px';
+            document.body.appendChild(bala);
+
+            let dx = mouseX - bx;
+            let dy = mouseY - by;
+            let dist = Math.hypot(dx, dy);
+            let vx = (dx / dist) * 6;
+            let vy = (dy / dist) * 6;
+
+            let bucleBala = setInterval(() => {
+                if (!bossActivo) { clearInterval(bucleBala); bala.remove(); return; }
+
+                let curX = parseFloat(bala.style.left) + vx;
+                let curY = parseFloat(bala.style.top) + vy;
+                bala.style.left = curX + 'px';
+                bala.style.top = curY + 'px';
+
+                let colDist = Math.hypot(mouseX - curX, mouseY - curY);
+                if (colDist < 25) {
+                    clearInterval(bucleBala);
+                    matarJugador();
+                }
+
+                if (curY < 0 || curY > window.innerHeight || curX < 0 || curX > window.innerWidth) {
+                    clearInterval(bucleBala);
+                    bala.remove();
+                }
+            }, 20);
+        }
+
+        function disparoJugador() { /* Mantenido por compatibilidad estructural */ }
+
+        function dispararJugador() {
+            const balaJ = document.createElement('div');
+            balaJ.className = 'bala-jugador';
+            balaJ.innerText = '🚀';
+            balaJ.style.left = mouseX + 'px';
+            balaJ.style.top = (mouseY - 20) + 'px';
+            document.body.appendChild(balaJ);
+
+            let bucleBalaJ = setInterval(() => {
+                let curY = parseFloat(balaJ.style.top) - 8;
+                balaJ.style.top = curY + 'px';
+
+                let bx = parseFloat(balaJ.style.left);
+                let distAlBoss = Math.hypot((bossX + 40) - bx, (bossY + 40) - curY);
+
+                if (distAlBoss < 50 && bossActivo) {
+                    clearInterval(bucleBalaJ);
+                    balaJ.remove();
+                    bossHP--;
+                    document.getElementById('hp-boss').innerText = bossHP;
+                    
+                    if (bossHP <= 0) {
+                        bossActivo = false;
+                        bossElemento.style.display = 'none';
+                        document.getElementById('vida-boss').style.display = 'none';
+                        let winMsg = {es: "¡Felicidades! Derrotaste al Boss Fantasma.", en: "Congratulations! You defeated the Ghost Boss.", de: "Herzlichen Glückwunsch! Du hast den Geister-Boss besiegt.", zh: "恭喜！你击败了幽灵Boss。"};
+                        alert(winMsg[idiomaActual] || winMsg['es']);
+                        actualizarPuntos(5000);
+                    }
+                }
+
+                if (curY < 0) { clearInterval(bucleBalaJ); balaJ.remove(); }
+            }, 20);
+        }
+
+        function matarJugador() {
+            bossActivo = false;
+            let lossMsg = {es: "💥 ¡BOOM! EL FANTASMA TE BORRÓ DE LA EXISTENCIA. Se cerrará la pestaña.", en: "💥 BOOM! THE GHOST ERASED YOU FROM EXISTENCE. Tab will close.", de: "💥 BOOM! DER GEIST HAT DICH AUS DER EXISTENZ GELÖSCHT. Tab wird geschlossen.", zh: "💥 砰！幽灵将你从存在中抹去。标签页将关闭。"};
+            alert(lossMsg[idiomaActual] || lossMsg['es']);
+            window.close();
+        }
+
+        // GENERADOR DE ORACIONES ABSURDAS (MAKEMELAUGH)
+        function ejecutarMakeMeLaugh() {
+            let largo = Math.floor(Math.random() * 7) + 3;
+            let fraseGenerada = [];
+            for (let i = 0; i < largo; i++) {
+                let palabraAleatoria = palabrasAbsurdas[Math.floor(Math.random() * palabrasAbsurdas.length)];
+                fraseGenerada.push(palabraAleatoria);
+            }
+            return fraseGenerada.join(" ");
+        }
+
+        // REPRODUCCIÓN DEL RELOJ DIGITAL (CORREGIDO)
+        function actualizarReloj() {
+            let ahora = new Date();
+            let horas = ahora.getHours();
+            let minutos = ahora.getMinutes();
+            let segundos = ahora.getSeconds();
+            let ampm = horas >= 12 ? 'PM' : 'AM';
+            horas = horas % 12; horas = horas ? horas : 12; 
+            minutos = minutos < 10 ? '0'+minutos : minutos;
+            segundos = segundos < 10 ? '0'+segundos : segundos;
+            if(idiomaActual !== 'off'){
+                document.getElementById('reloj-digital').innerText = horas + ':' + minutos + ':' + segundos + ' ' + ampm;
+            }
+        }
+        setInterval(actualizarReloj, 1000);
+        actualizarReloj();
+
+        function contarClic() { totalClics++; if(idiomaActual !== 'off') document.getElementById('txt-clics').innerText = totalClics; }
+        function cambiarFondo(color) { document.body.style.backgroundColor = color; }
+        function actualizarPuntos(cantidad) { puntos += cantidad; if(idiomaActual !== 'off') document.getElementById('puntos-globales').innerText = puntos.toLocaleString(); }
+
+        // CALCULADORA
+        function calcularAritmetica() {
+            let n1 = parseFloat(document.getElementById('calc-n1').value);
+            let n2 = parseFloat(document.getElementById('calc-n2').value);
+            let op = document.getElementById('calc-operador').value;
+            let res = 0;
+            if (isNaN(n1) || isNaN(n2)) { 
+                let alertMsg = {es: "Pon números válidos", en: "Enter valid numbers", de: "Gültige Zahlen eingeben", zh: "输入有效数字"};
+                alert(alertMsg[idiomaActual] || alertMsg['es']); 
+                return; 
+            }
+            if (op === "+") res = n1 + n2;
+            else if (op === "-") res = n1 - n2;
+            else if (op === "*") res = n1 * n2;
+            else if (op === "/") res = n2 !== 0 ? n1 / n2 : "Error";
+            if(idiomaActual !== 'off') {
+                document.getElementById('calc-resultado').innerText = res;
+                document.getElementById('calc-historial').innerHTML += `${n1} ${op} ${n2} = ${res}<br>`;
+            }
+        }
+
+        // OPERACIÓN INVERSA
+        function generarInversa() {
+            let numOculto = Math.floor(Math.random() * 10) + 1;
+            let multiplicador = Math.floor(Math.random() * 9) + 2;
+            sol_inversa = numOculto;
+            if(idiomaActual !== 'off') {
+                document.getElementById('inv-enunciado').innerText = `¿ ? * ${multiplicador} = ${numOculto * multiplicador}`;
+                document.getElementById('inv-respuesta').value = "";
+                document.getElementById('inv-respuesta').style.display = "inline";
+                document.getElementById('inv-btn-verificar').style.display = "inline";
+                document.getElementById('inv-mensaje').innerText = "";
+            }
+        }
+
+        function verificarInversa() {
+            let resp = parseInt(document.getElementById('inv-respuesta').value);
+            if (resp === sol_inversa) { 
+                let okMsg = {es: "¡Correcto! +5 puntos.", en: "Correct! +5 points.", de: "Richtig! +5 Punkte.", zh: "正确！+5 分。"};
+                if(idiomaActual !== 'off') document.getElementById('inv-mensaje').innerText = okMsg[idiomaActual] || okMsg['es']; 
+                actualizarPuntos(5); 
+            }
+            else { 
+                let noMsg = {es: "Incorrecto.", en: "Incorrect.", de: "Falsch.", zh: "不正确。"};
+                if(idiomaActual !== 'off') document.getElementById('inv-mensaje').innerText = noMsg[idiomaActual] || noMsg['es']; 
+            }
+        }
+
+        // ANALIZADOR DE NÚMEROS
+        function analizarNumero() {
+            let num = parseInt(document.getElementById('analizar-num').value);
+            if (isNaN(num)) return;
+            
+            let parImparEs = (num % 2 === 0) ? "PAR" : "IMPAR";
+            let parImparEn = (num % 2 === 0) ? "EVEN" : "ODD";
+            let parImparDe = (num % 2 === 0) ? "GERADE" : "UNGERADE";
+            let parImparZh = (num % 2 === 0) ? "偶数" : "奇数";
+            
+            let primoEs = esPrimo(num) ? "SÍ es primo" : "NO es primo";
+            let primoEn = esPrimo(num) ? "IS prime" : "IS NOT prime";
+            let primoDe = esPrimo(num) ? "IST eine Primzahl" : "IST KEINE Primzahl";
+            let primoZh = esPrimo(num) ? "是质数" : "不是质数";
+
+            let resHtml = {
+                es: `• Propiedades: Es <b>${parImparEs}</b> y <b>${primoEs}</b>.<br>• Cuadrado: <b>${num * num}</b><br>• Raíz: <b>${num >= 0 ? Math.sqrt(num).toFixed(2) : 'Error'}</b>`,
+                en: `• Properties: It is <b>${parImparEn}</b> and <b>${primoEn}</b>.<br>• Square: <b>${num * num}</b><br>• Root: <b>${num >= 0 ? Math.sqrt(num).toFixed(2) : 'Error'}</b>`,
+                de: `• Eigenschaften: Es ist <b>${parImparDe}</b> und <b>${primoDe}</b>.<br>• Quadrat: <b>${num * num}</b><br>• Wurzel: <b>${num >= 0 ? Math.sqrt(num).toFixed(2) : 'Error'}</b>`,
+                zh: `• 属性: 它是 <b>${parImparZh}</b> 和 <b>${primoZh}</b>。<br>• 平方: <b>${num * num}</b><br>• 根: <b>${num >= 0 ? Math.sqrt(num).toFixed(2) : '错误'}</b>`
+            };
+
+            if(idiomaActual !== 'off') document.getElementById('analizar-resultado').innerHTML = resHtml[idiomaActual] || resHtml['es'];
+        }
+        function esPrimo(n) { if (n <= 1) return false; for (let i = 2; i <= Math.sqrt(n); i++) { if (n % i === 0) return false; } return true; }
+
+        function calcularPorcentaje() {
+            let porc = parseFloat(document.getElementById('porc-porcentaje').value);
+            let total = parseFloat(document.getElementById('porc-total').value);
+            let lblRes = {es: "Resultado: ", en: "Result: ", de: "Ergebnis: ", zh: "结果: "};
+            if(!isNaN(porc) && !isNaN(total) && idiomaActual !== 'off') {
+                document.getElementById('porc-resultado').innerText = (lblRes[idiomaActual] || lblRes['es']) + ((porc * total) / 100);
+            }
+        }
+
+        // TERMINAL DE CÓDIGOS SECRETOS
+        function verificarCodigoSecreto() {
+            let cod = document.getElementById('input-codigo').value.trim();
+            let cajaResp = document.getElementById('codigo-respuesta');
+            
+            if(cod === "LINKTOTHEGAME") {
+                cajaResp.innerText = "¡Redirigiendo a Guess_2.0 en GitHub... 🚀!";
+                window.open("https://github.com/ANNEPRO123/Guess_2.0", "_blank");
+                document.getElementById('input-codigo').value = "";
+                return;
+            }
+
+            if(cod === "GUN") {
+                tieneArma = true;
+                cajaResp.innerText = "🔫 ¡ARMA ACTIVA! Ahora usa la tecla K para derribar al fantasma.";
+                document.getElementById('txt-arma').style.display = 'block';
+                document.getElementById('input-codigo').value = "";
+                return;
+            }
+
+            if(cod === "MAKEMELAUGH") {
+                cajaResp.innerText = `🤖 FRASE ABSURDA GENERADA:\n"${ejecutarMakeMeLaugh()}"`;
+                document.getElementById('input-codigo').value = "";
+                return;
+            }
+
+            switch(cod) {
+                case "TIME": cajaResp.innerText = "TIME: " + new Date().toLocaleTimeString(); break;
+                case "DATE": cajaResp.innerText = "DATE: " + new Date().toLocaleDateString(); break;
+                case "COFFEE": cajaResp.innerText = "TAKE A BREAK, PLAYER"; break;
+                case "GOAL": cajaResp.innerText = "FIND THE SECRET NUMBER"; break;
+                case "DEV": cajaResp.innerText = "INF VIDAS ACTIVE"; break;
+                case "CHANGETOFONT2": cajaResp.innerText = "FATAL CORRUPTION"; break;
+                case "STORYMODE2": cajaResp.innerText = "STORY: COPITO"; break;
+                case "RESET": cajaResp.innerText = "DELETE LICENSE?"; break;
+                case "SONIC": cajaResp.innerText = "Gotta go fast!"; break;
+                case "IMWINNER": cajaResp.innerText = "No."; break;
+                case "BUYMEAPC": cajaResp.innerText = "Are you drunk, right?"; break;
+                case "XD": cajaResp.innerText = "XD"; break;
+                case "WHOISMYSAVIOR?": cajaResp.innerText = "Let me think! let me think!"; break;
+                case "MERRYCHRISTMAS": cajaResp.innerText = "For you!"; break;
+                case "LUCKYNUMBER": cajaResp.innerText = "Try 7 or 77..."; break;
+                case "LEVEL4ISINFRONTOFME": cajaResp.innerText = "Have you seen it?"; break;
+                case "TELLMEAJOKE": cajaResp.innerText = "What is a robot's favorite snack? Computer chips!"; break;
+                case "TELLMEASECRET": cajaResp.innerText = "Put 098..."; break;
+                case "INSTANTWIN": cajaResp.innerText = "CHEATER DETECTED: " + cod; break;
+                case "WHOIAM?": cajaResp.innerText = "JUST A PLAYER IN MY GAME."; break;
+                case "1+1=?": cajaResp.innerText = "X I AM NOT A CALCULATOR X"; break;
+                default: cajaResp.innerText = ""; 
+            }
+        }
+
+        // BOTÓN IMPOSIBLE
+        function moverBotonImposible() {
+            const btn = document.getElementById('btn-imposible');
+            let xAleatoria = Math.floor(Math.random() * (window.innerWidth - 150));
+            let yAleatoria = Math.floor(Math.random() * (window.innerHeight - 100));
+            btn.style.position = 'fixed';
+            btn.style.left = xAleatoria + 'px';
+            btn.style.top = yAleatoria + 'px';
+        }
+        function ganarBotonImposible() { 
+            let winBtnMsg = {es: "¡¿CÓMO?! Le diste clic.", en: "HOW?! You clicked it.", de: "WIE?! Du hast geklickt.", zh: "怎么可能？！你点击了它。"};
+            alert(winBtnMsg[idiomaActual] || winBtnMsg['es']); 
+            actualizarPuntos(1000000000000000); 
+        }
+
+        function moverOjos(mx, my) {
+            const pupilas = [document.getElementById('pupila1'), document.getElementById('pupila2')];
+            pupilas.forEach(pupila => {
+                if(pupila) {
+                    const ojo = pupila.parentElement; const rec = ojo.getBoundingClientRect();
+                    const ox = rec.left + rec.width / 2; const oy = rec.top + rec.height / 2;
+                    const angulo = Math.atan2(my - oy, mx - ox);
+                    const px = Math.cos(angulo) * 5; const py = Math.sin(angulo) * 5;
+                    pupila.style.transform = `translate(${px}px, ${py}px)`;
+                }
+            });
+        }
+    </script>
+</body>
+</html>

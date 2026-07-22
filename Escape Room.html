@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Emoji Mansion: Sobrevive a la Lógica</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #05050a;
+            color: #d1d1d1;
+            font-family: 'Courier New', Courier, monospace;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            user-select: none;
+        }
+
+        /* Pantalla de inicio con la casa gigante */
+        #pantalla-inicio {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            text-align: center;
+            cursor: pointer;
+            transition: opacity 0.5s;
+        }
+
+        #casa-gigante {
+            font-size: 150px;
+            filter: drop-shadow(0px 0px 20px rgba(255, 0, 0, 0.5));
+            transition: transform 0.3s, filter 0.3s;
+        }
+        
+        #pantalla-inicio:hover #casa-gigante {
+            transform: scale(1.1);
+            filter: drop-shadow(0px 0px 30px rgba(255, 0, 0, 0.8));
+        }
+
+        .texto-rojo {
+            color: #ff3333;
+            text-shadow: 0 0 10px rgba(255, 0, 0, 0.7);
+        }
+
+        /* --- Contenedor Principal del Juego --- */
+        #contenedor-juego {
+            display: none;
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+        }
+
+        /* --- UI Superior --- */
+        #ui-superior {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            right: 10px;
+            display: flex;
+            justify-content: space-between;
+            z-index: 100;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #333;
+        }
+
+        #vidas-contador {
+            color: #ff3333;
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+        #objetos-contador {
+            color: #00ffcc;
+            font-size: 20px;
+        }
+
+        /* --- Zona de Objetos Flotantes --- */
+        #zona-objetos {
+            width: 100%;
+            height: 60vh;
+            background: radial-gradient(circle, #1a1a2e 0%, #05050a 100%);
+            overflow: hidden;
+            border-bottom: 2px solid #333;
+            position: relative;
+        }
+
+        .emoji-flotante {
+            position: absolute;
+            font-size: 35px;
+            cursor: pointer;
+            user-select: none;
+            transition: transform 0.1s;
+        }
+        .emoji-flotante:hover {
+            transform: scale(1.4) rotate(15deg);
+        }
+
+        /* --- UI Inferior (Lista y Puzzles) --- */
+        #ui-inferior {
+            width: 100%;
+            height: 40vh;
+            background: #111;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            padding: 15px;
+            box-sizing: border-box;
+            border-top: 2px solid #333;
+        }
+
+        #seccion-lista {
+            border-right: 1px solid #333;
+            padding-right: 10px;
+            overflow-y: auto;
+        }
+
+        .item-buscar {
+            font-size: 16px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #aaa;
+        }
+
+        .encontrado {
+            color: #00ff00 !important;
+            text-decoration: line-through;
+            opacity: 0.5;
+        }
+
+        #seccion-puzzles {
+            display: flex;
+            flex-direction: column;
+            padding-left: 10px;
+            color: #ddd;
+        }
+
+        #puzzles-bloqueados {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+            color: #555;
+            font-style: italic;
+            border: 2px dashed #333;
+            text-align: center;
+        }
+
+        #puzzles-activos {
+            display: none;
+        }
+
+        #puzzle-texto {
+            font-size: 15px;
+            margin-bottom: 15px;
+            background: #222;
+            padding: 10px;
+            border-radius: 5px;
+            color: #ffdf00;
+            line-height: 1.4;
+        }
+
+        #respuesta-puzzle {
+            background: #000;
+            border: 1px solid #444;
+            color: #00ff00;
+            padding: 10px;
+            font-size: 18px;
+            width: 100%;
+            box-sizing: border-box;
+            text-align: center;
+        }
+
+        /* --- Fantasma Final --- */
+        #fantasma-final {
+            display: none;
+            position: absolute;
+            font-size: 120px;
+            cursor: pointer;
+            z-index: 2000;
+            user-select: none;
+            filter: drop-shadow(0px 0px 25px rgba(255, 255, 255, 0.9));
+        }
+
+        /* --- Overlays de final --- */
+        .pantalla-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: black;
+            z-index: 3000;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+
+        #game-over {
+            background: #200000;
+            color: #ff0000;
+        }
+
+        #victoria {
+            background: #002000;
+            color: #00ff00;
+        }
+
+        .boton-reiniciar {
+            margin-top: 30px;
+            background: #333;
+            color: white;
+            border: 1px solid #555;
+            padding: 15px 30px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 16px;
+        }
+        .boton-reiniciar:hover { background: #555; }
+
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+    <div id="pantalla-inicio" onclick="comenzarInvasion()">
+        <h1 class="texto-rojo">¿Te atreves a entrar?</h1>
+        <div id="casa-gigante">🏚️</div>
+        <p>Toca la mansión para buscar la salida...</p>
+    </div>
+
+    <div id="contenedor-juego">
+        
+        <div id="ui-superior">
+            <div id="vidas-contador">Vidas: ❤️❤️❤️</div>
+            <div id="objetos-contador">Objetos: <span id="n-encontrados">0</span>/9</div>
+        </div>
+
+        <div id="zona-objects-parent">
+            <div id="zona-objetos">
+                </div>
+        </div>
+
+        <div id="ui-inferior">
+            <div id="seccion-lista">
+                <h3>🔍 Necesitas encontrar:</h3>
+                <div id="lista-html"></div>
+            </div>
+
+            <div id="seccion-puzzles">
+                <h3>🧩 Mecanismo de Cierre</h3>
+                <div id="puzzles-bloqueados">
+                    Encuentra los 9 objetos escondidos arriba para activar los acertijos de la puerta...
+                </div>
+                <div id="puzzles-activos">
+                    <p id="puzzle-texto">Cargando desafío...</p>
+                    <input type="text" id="respuesta-puzzle" placeholder="[ RESPUESTA ]" onkeypress="evaluarInputPuzzle(event)">
+                    <small style="color: #666; display: block; margin-top: 5px;">Presiona ENTER para enviar solución.</small>
+                </div>
+            </div>
+        </div>
+
+        <div id="fantasma-final" onclick="clicEnFantasma()">👻</div>
+    </div>
+
+    <div id="game-over" class="pantalla-overlay">
+        <h1 style="font-size: 45px;">TE QUEDASTE ATRAPADO</h1>
+        <p style="font-size: 80px;">🔒🕵️🏚️</p>
+        <p>Hiciste demasiados fallos. La mansión emoji se cerró para siempre.</p>
+        <button class="boton-reiniciar" onclick="location.reload()">Intentar otra vez</button>
+    </div>
+
+    <div id="victoria" class="pantalla-overlay">
+        <h1 style="font-size: 50px;">¡LOGRASTE ESCAPAR!</h1>
+        <p style="font-size: 100px;">🏃💨🎈🏆</p>
+        <p>Destruiste al fantasma a tiempo presionando la 'L'. ¡Eres libre!</p>
+        <button class="boton-reiniciar" onclick="location.reload()">Jugar de nuevo</button>
+    </div>
+
+    <script>
+        const CATALOGO_CAOS = ['🧸','🚗','🚲','🚀','🍕','🍔','🍦','🍩','🎒','🎸','🎨','📐','⏰','💎','👑','🦊','🐸','🍿','🥑','🌮','🍣','⚽','🎲','🕶️','🎈','🎁','📚','✏️','💡','🔋','🧪','🛸','🍄','🔥','🦴','💩','💻','🧱','💎','🔮','🧿','🧻'];
+
+        const OBJETOS_A_BUSCAR = [
+            { id: 1, emoji: '🔑', nombre: 'Llave Oxidada', encontrado: false },
+            { id: 2, emoji: '🔮', nombre: 'Orbe Mental', encontrado: false },
+            { id: 3, emoji: '🕯️', nombre: 'Vela Eterna', encontrado: false },
+            { id: 4, emoji: '🧲', nombre: 'Imán de Lógica', encontrado: false },
+            { id: 5, emoji: '☠️', nombre: 'Emblema Antiguo', encontrado: false },
+            { id: 6, emoji: '🧬', nombre: 'Muestra Lógica', encontrado: false },
+            { id: 7, emoji: '🔭', nombre: 'Catalejo Mental', encontrado: false },
+            { id: 8, emoji: '⚖️', nombre: 'Balanza del Orden', encontrado: false },
+            { id: 9, emoji: '🧊', nombre: 'Cubo Matemático', encontrado: false }
+        ];
+
+        const PUZZLES_SALA = [
+            { 
+                pregunta: 'DESAFÍO 1/3 (Matemático):<br>Tengo 9 cubos matemáticos en la mano. Si pierdo la mitad de 2, ¿cuántos me quedan?<br>(Escribe solo el número)',
+                respuesta: '8'
+            },
+            {
+                pregunta: 'DESAFÍO 2/3 (Lógico):<br>¿Qué letra completa la serie lógica?<br>E, F, M, A, M, J, ...',
+                respuesta: 'J'
+            },
+            {
+                pregunta: 'DESAFÍO FINAL 3/3 (Mental):<br>No tengo peso, pero si me metes en un barril lleno de agua, pesará menos. ¿Qué soy?<br>(Una sola palabra en mayúsculas)',
+                respuesta: 'AGUJERO'
+            }
+        ];
+
+        let vidas = 3;
+        let objetosEncontrados = 0;
+        let fasePuzzleActual = 0;
+        let juegoTerminado = false;
+        let fantasmaChaseMode = false;
+        let fantasmaIntervalId;
+
+        function comenzarInvasion() {
+            document.getElementById('pantalla-inicio').style.opacity = '0';
+            setTimeout(() => {
+                document.getElementById('pantalla-inicio').style.display = 'none';
+                document.getElementById('contenedor-juego').style.display = 'block';
+                crearCaos();
+                renderizarListaHTML();
+            }, 400);
+        }
+
+        function crearCaos() {
+            const zona = document.getElementById('zona-objetos');
+            const ancho = zona.clientWidth - 50;
+            const alto = zona.clientHeight - 50;
+
+            let poolArr = [];
+            for (let i = 0; i < 160; i++) {
+                poolArr.push({ type: 'deco', emoji: CATALOGO_CAOS[Math.floor(Math.random() * CATALOGO_CAOS.length)] });
+            }
+            OBJETOS_A_BUSCAR.forEach(obj => {
+                poolArr.push({ type: 'target', ...obj });
+            });
+
+            poolArr.sort(() => Math.random() - 0.5);
+
+            poolArr.forEach(data => {
+                const el = document.createElement('span');
+                el.className = 'emoji-flotante';
+                el.innerText = data.emoji;
+                el.style.left = Math.random() * ancho + 'px';
+                el.style.top = Math.random() * alto + 'px';
+
+                el.onclick = function(e) {
+                    e.stopPropagation();
+                    manejarClicEmoji(data, el);
+                };
+
+                zona.appendChild(el);
+                animateEmoji(el, ancho, alto);
+            });
+        }
+
+        function animateEmoji(el, mW, mH) {
+            let vX = (Math.random() - 0.5) * 4;
+            let vY = (Math.random() - 0.5) * 4;
+            let pX = parseFloat(el.style.left);
+            let pY = parseFloat(el.style.top);
+
+            function step() {
+                if (juegoTerminado) return;
+
+                pX += vX;
+                pY += vY;
+
+                if (pX < 0 || pX > mW) vX *= -1;
+                if (pY < 0 || pY > mH) vY *= -1;
+
+                el.style.left = pX + 'px';
+                el.style.top = pY + 'px';
+
+                requestAnimationFrame(step);
+            }
+            requestAnimationFrame(step);
+        }
+
+        function manejarClicEmoji(data, elHtml) {
+            if (juegoTerminado) return;
+
+            if (data.type === 'target') {
+                const obj = OBJETOS_A_BUSCAR.find(o => o.id === data.id);
+                if (!obj.encontrado) {
+                    obj.encontrado = true;
+                    objetosEncontrados++;
+                    document.getElementById('n-encontrados').innerText = objetosEncontrados;
+                    
+                    elHtml.style.transform = 'scale(0)';
+                    setTimeout(() => elHtml.remove(), 150);
+                    
+                    actualizarListaHTML(data.id);
+
+                    if (objetosEncontrados === 9) {
+                        activarFasePuzzles();
+                    }
+                }
+            } else {
+                manejarMiss();
+                let viejoTexto = elHtml.innerText;
+                elHtml.innerText = '❌';
+                setTimeout(() => { if(elHtml) elHtml.innerText = viejoTexto; }, 400);
+            }
+        }
+
+        function renderizarListaHTML() {
+            const container = document.getElementById('lista-html');
+            container.innerHTML = '';
+            OBJETOS_A_BUSCAR.forEach(obj => {
+                const div = document.createElement('div');
+                div.id = `lista-item-${obj.id}`;
+                div.className = 'item-buscar';
+                div.innerHTML = `<span>${obj.emoji}</span> ${obj.nombre}`;
+                container.appendChild(div);
+            });
+        }
+
+        function actualizarListaHTML(id) {
+            const el = document.getElementById(`lista-item-${id}`);
+            if(el) el.classList.add('encontrado');
+        }
+
+        function manejarMiss() {
+            if (juegoTerminado) return;
+            vidas--;
+            actualizarUIVidas();
+            if (vidas <= 0) {
+                forzarCierreMansion();
+            }
+        }
+
+        function actualizarUIVidas() {
+            const h = '❤️'.repeat(vidas) + '🖤'.repeat(3 - vidas);
+            document.getElementById('vidas-contador').innerText = `Vidas: ${h}`;
+        }
+
+        function forzarCierreMansion() {
+            juegoTerminado = true;
+            clearInterval(fantasmaIntervalId);
+            document.getElementById('contenedor-juego').classList.add('hidden');
+            document.getElementById('game-over').style.display = 'flex';
+        }
+
+        function activarFasePuzzles() {
+            document.getElementById('puzzles-bloqueados').style.display = 'none';
+            document.getElementById('puzzles-activos').style.display = 'block';
+            cargarPuzzleActual();
+        }
+
+        function cargarPuzzleActual() {
+            if (fasePuzzleActual < PUZZLES_SALA.length) {
+                const puzzle = PUZZLES_SALA[fasePuzzleActual];
+                document.getElementById('puzzle-texto').innerHTML = puzzle.pregunta;
+                document.getElementById('respuesta-puzzle').value = '';
+                document.getElementById('respuesta-puzzle').focus();
+            } else {
+                iniciarChaseMode();
+            }
+        }
+
+        function evaluarInputPuzzle(event) {
+            if (event.key === 'Enter') {
+                const input = document.getElementById('respuesta-puzzle').value.trim().toUpperCase();
+                const respuestaCorrecta = PUZZLES_SALA[fasePuzzleActual].respuesta;
+
+                if (input === respuestaCorrecta) {
+                    fasePuzzleActual++;
+                    document.getElementById('puzzle-texto').style.color = '#00ff00';
+                    document.getElementById('puzzle-texto').innerText = '✔ MECANISMO DESBLOQUEADO';
+                    
+                    setTimeout(() => {
+                        document.getElementById('puzzle-texto').style.color = '#ffdf00';
+                        cargarPuzzleActual();
+                    }, 1000);
+                } else {
+                    document.getElementById('puzzle-texto').style.color = '#ff0000';
+                    document.getElementById('puzzle-texto').innerText = '❌ CÓDIGO INCORRECTO - ERROR EN SISTEMA';
+                    manejarMiss();
+                    
+                    if (!juegoTerminado) {
+                        setTimeout(() => {
+                            document.getElementById('puzzle-texto').style.color = '#ffdf00';
+                            cargarPuzzleActual();
+                        }, 1200);
+                    }
+                }
+            }
+        }
+
+        function iniciarChaseMode() {
+            if (juegoTerminado) return;
+
+            fantasmaChaseMode = true;
+            document.getElementById('puzzles-activos').innerHTML = '<h2 style="color:red; animation: pulse 1s infinite;">⚠️ ¡ALERTA DE FANTASMA! Presiona la letra "L" en tu teclado RÁPIDO ⚠️</h2>';
+            document.getElementById('zona-objetos').style.background = 'radial-gradient(circle, #ff000044 0%, #000 100%)';
+            
+            const fantasma = document.getElementById('fantasma-final');
+            fantasma.style.display = 'block';
+            
+            const zona = document.getElementById('zona-objetos');
+            const maxW = zona.clientWidth - 120;
+            const maxH = zona.clientHeight - 120;
+
+            fantasmaIntervalId = setInterval(() => {
+                const targetX = Math.random() * maxW;
+                const targetY = Math.random() * maxH;
+                
+                fantasma.style.transition = 'all 0.3s ease-out';
+                fantasma.style.left = targetX + 'px';
+                fantasma.style.top = targetY + 'px';
+            }, 400);
+
+            document.addEventListener('keydown', escucharTeclaL);
+        }
+
+        function clicEnFantasma() {
+            alert("👻 El fantasma absorbe tu click y se ríe... ¡El mouse no le hace daño! ¡Usa la tecla 'L' de tu teclado!");
+        }
+
+        function escucharTeclaL(event) {
+            if (fantasmaChaseMode && (event.key === 'l' || event.key === 'L')) {
+                ganarJuego();
+            }
+        }
+
+        function ganarJuego() {
+            juegoTerminado = true;
+            fantasmaChaseMode = false;
+            clearInterval(fantasmaIntervalId);
+            document.removeEventListener('keydown', escucharTeclaL);
+
+            document.getElementById('contenedor-juego').classList.add('hidden');
+            document.getElementById('victoria').style.display = 'flex';
+        }
+    </script>
+</body>
+</html>
