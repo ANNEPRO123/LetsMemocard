@@ -35,7 +35,7 @@ Este paquete contiene 3 experiencias únicas en formato interactivo:
 
         Intenta hacer clic en el Botón Imposible (Sección 7) para ganar 1.000.000.000.000.000 de puntos.
 
-🏚️ 2. Juego Extra #1: Emoji Mansion: Sobrevive a la Lógica
+🏚️ 2.Emoji Mansion: Sobrevive a la Lógica
 📖 Mini-Guía de Juego:
 
     Fase 1 - Caza de Objetos: Busca los 9 objetos perdidos (llave 🔑, orbe 🔮, vela 🕯️, etc.) ocultos entre una lluvia caótica de emojis flotantes. Haz clic solo sobre los objetos correctos; si te equivocas de emoji, perderás vidas ❤️.
@@ -44,7 +44,7 @@ Este paquete contiene 3 experiencias únicas en formato interactivo:
 
     Fase 3 - El Encuentro Final (Boss): Un fantasma 👻 aparecerá en pantalla. ¡El clic del mouse no le hace daño! Para vencerlo y escapar de la mansión, debes presionar rápido la tecla L en tu teclado.
 
-🃏 3. Juego Extra #2: LetsMemocard! Ultimate Dev & Arcade Edition
+🃏 3. LetsMemocard! Ultimate Dev & Arcade Edition
 📖 Mini-Guía de Juego:
 
     Mecánica Base: Encuentra las parejas de cartas antes de que se agote el tiempo o tus vidas.
@@ -69,7 +69,7 @@ No requiere ningún proceso de instalación complejo ni servidor local:
 
     ¡A disfrutar desde tu navegador web favorito! 🥳🎉
 
-    (este README esat creado a base de Gemini una IA osea que puede contener errores)
+    (este README esta creado a base de Gemini una IA asi que puede contener errores)
 
 
 
