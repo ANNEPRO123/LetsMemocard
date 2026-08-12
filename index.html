@@ -2661,6 +2661,13 @@
         };
 
         window.onload = () => Game.init();
+
+window.addEventListener('click', () => {
+    if (window.AudioEngine && window.AudioEngine.ctx && window.AudioEngine.ctx.state === 'suspended') {
+        window.AudioEngine.ctx.resume();
+    }
+}, { once: true });
+        
     </script>
 </body>
 </html>
